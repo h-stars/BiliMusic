@@ -622,27 +622,85 @@ public class PlayService extends Service {
         if (v < 0.5f) v = 0.5f;
         if (v > 2.0f) v = 2.0f;
         speed = v;
-        applySpeed();
+        // 用户手动调倍速：必须保持原本的播放/暂停状态
+        applySpeedPreservingState();
         broadcastState();
     }
 
     /**
-     * 把当前倍速应用到 MediaPlayer。
+     * 把当前倍速应用到 MediaPlayer，不改变播放/暂停状态。
      *
-     * PlaybackParams 只能在 prepare 之后设置，且 setDataSource 换源后会失效，
-     * 所以每次起播都要重新套用一次。
+     * 用于起播链路（onPrepared / doPlay）：那里由调用方决定播不播，
+     * 这里只负责把参数设进去。
+     *
+     * PlaybackParams 只能在 prepare 之后设置，且 setDataSource 换源后
+     * 会失效，所以每次起播都要重新套用一次。
      */
     private void applySpeed() {
+        applySpeedInternal();
+    }
+
+    /**
+     * 用户手动调倍速时走这里。
+     *
+     * 关键：**暂停状态下完全不碰 MediaPlayer**。
+     *
+     * 之前的做法是「照常 setPlaybackParams，然后发现它在播就 pause()」，
+     * 但很多国产 ROM 的 NuPlayer 在 setPlaybackParams 时会 flush 并
+     * 自动 resume，于是「暂停时调倍速」会先响一瞬再被我 pause 掉——
+     * 用户听到的就是一声「咯」。
+     *
+     * 现在改成：暂停时只把 speed 字段记下来，不调用任何 MediaPlayer API。
+     * 真正生效要等到 doPlay()，那里本来就会重新 applySpeed()。
+     * 这样既是干净的暂停，也保证恢复播放时用上最新倍速。
+     */
+    private void applySpeedPreservingState() {
         if (mp == null || !prepared) return;
+        if (!playing) {
+            // 暂停中：不动媒体，等 play() 时再应用
+            Log.i(TAG, "speed set while paused, deferred until play: " + speed);
+            return;
+        }
+        applySpeedInternal();
+    }
+
+    private void applySpeedInternal() {
+        if (mp == null || !prepared) return;
+
+        // 音高跟随速度：只做重采样，不做时间伸缩。
+        //
+        // 之前写的是 setPitch(1.0f)——「变速不变调」，那样系统必须跑
+        // WSOLA/SOLA 类的时间拉伸算法：按新速度跳着拼帧，拼接处相位
+        // 不连续，于是产生「嘶嘶」「金属感」的伪影。倍速越极端越明显
+        // （1.8x 要丢掉约 45% 的音频，0.5x 要把每段重复一遍）。
+        //
+        // 改成 pitch = speed 后，底层只是简单的采样率重映射（等价于
+        // 磁带快放/慢放），相位天然连续，伪影彻底消失。
+        // 代价是音色会变：1.8x 偏高偏「花栗鼠」，0.5x 偏低偏沉。
+        boolean ok = false;
         try {
             android.media.PlaybackParams pp = mp.getPlaybackParams();
             pp.setSpeed(speed);
-            // 固定音高为 1.0，只改变速度不改音调。
-            // 不设的话，1.5x 会像"快放"一样变尖。
-            pp.setPitch(1.0f);
+            pp.setPitch(speed);
             mp.setPlaybackParams(pp);
+            ok = true;
         } catch (Exception e) {
-            Log.w(TAG, "applySpeed failed", e);
+            // 某些设备对 pitch 的取值范围限制比 speed 更严
+            // （例如只接受 [0.5, 2.0] 的开区间，或者干脆不支持同时设两者）。
+            // 这种情况下退回到只设 speed，至少保证倍速能用。
+            Log.w(TAG, "setSpeed+setPitch failed, fallback to speed only", e);
+        }
+
+        if (!ok) {
+            try {
+                android.media.PlaybackParams pp = mp.getPlaybackParams();
+                pp.setSpeed(speed);
+                mp.setPlaybackParams(pp);
+            } catch (Exception e) {
+                // 两种设置都失败：这台设备既不支持同时设 pitch，也不支持单独设 speed。
+                // 只能保持原速播放，至少不崩。
+                Log.w(TAG, "applySpeed fallback failed", e);
+            }
         }
     }
 
