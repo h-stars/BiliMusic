@@ -1,0 +1,47 @@
+# ============================================================
+# 换行符与编码规范
+# ============================================================
+#
+# 这个项目对换行符非常敏感：
+#   · Java 源码必须是 LF，否则某些工具链会报「非法字符」
+#   · build.ps1 必须是 CRLF + UTF-8 BOM，
+#     否则 PowerShell 5.1 会按 GBK 解析中文注释导致乱码
+#
+# 用 Git 的自动转换会破坏这些约束，所以显式固定下来。
+
+* text=auto eol=lf
+
+# 源码与文档：强制 LF
+*.java   text eol=lf
+*.md     text eol=lf
+*.xml    text eol=lf
+*.json   text eol=lf
+*.properties text eol=lf
+*.gitignore  text eol=lf
+*.gitattributes text eol=lf
+LICENSE  text eol=lf
+
+# PowerShell 脚本：CRLF
+*.ps1    text eol=crlf
+*.bat    text eol=crlf
+*.cmd    text eol=crlf
+
+# Shell 脚本：LF
+*.sh     text eol=lf
+
+# 二进制：不做任何转换
+*.apk        binary
+*.aab        binary
+*.keystore   binary
+*.jks        binary
+*.p12        binary
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.webp       binary
+*.ttf        binary
+*.otf        binary
+
+# 构建产物不参与 diff 统计
+build/**   linguist-generated
+dist/**    linguist-generated
