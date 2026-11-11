@@ -8,7 +8,7 @@
 ## 一、目录结构
 
 ```
-BiliMusicDev\                        ← 整个文件夹可直接删除，不留系统残留
+BiliMusicWork\                       ← 整个文件夹可直接删除，不留系统残留
 ├── toolchain\                       ← 便携式工具链，568 MB
 │   ├── jdk-17\                      JDK 17.0.21（含 javac / java / keytool）
 │   └── sdk\
@@ -71,7 +71,7 @@ powershell -ExecutionPolicy Bypass -File .\build.ps1 -Clean
 
 `BiliMusic开发` 这种含中文的路径，aapt2 报
 `failed to open directory`。**目录名必须纯 ASCII**，
-所以这里叫 `BiliMusicDev`。
+所以目录名建议用纯 ASCII，例如 `BiliMusicWork`。
 
 ### 2. PowerShell 5.1 按 GBK 读无 BOM 的 .ps1
 
@@ -87,7 +87,7 @@ javac 的 `@源列表`、R8 的 proguard 配置**都不认开头 BOM**。
 ### 4. `@files` 里路径的两个坑
 
 - 含空格必须加引号，否则 `C:\My Projects\...` 会被拆成两个 token
-- 反斜杠是转义符，会被吃掉（`D:DeepSeek`），所以要换成正斜杠
+- 反斜杠是转义符，会被吃掉（`D:\MyProject` 变成 `D:MyProject`），所以要换成正斜杠
 
 ### 5. 原生命令写 stderr 会被当成致命错误
 
@@ -104,7 +104,7 @@ javac 成功但退出码可能非 0。脚本以「是否产出 class」为准，
 
 ## 五、换电脑怎么迁移
 
-整个 `BiliMusicDev` 文件夹拷走即可，工具链和源码都在里面。
+整个 `BiliMusicWork` 文件夹拷走即可，工具链和源码都在里面。
 换路径后 `build.ps1` 会自动按相对位置找到 `..\toolchain`。
 
 若工具链丢失，重新下载：

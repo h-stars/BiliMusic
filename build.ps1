@@ -72,7 +72,7 @@ $Tmp    = Join-Path $Out 'tmp'
 $Dist   = Join-Path $Root 'dist'   # 历史版本归档，不随 -Clean 清除
 
 # ------------------------------------------------------------------ 环境探测
-# toolchain 布局（便携式，整个 BiliMusicDev 文件夹可直接删掉）：
+# toolchain 布局（便携式，整个工作目录可直接删掉）：
 #   toolchain\jdk-17\bin\javac.exe
 #   toolchain\sdk\build-tools\34.0.0\{aapt2,zipalign}.exe
 #   toolchain\sdk\build-tools\34.0.0\lib\{d8,apksigner}.jar
